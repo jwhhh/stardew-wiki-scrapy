@@ -1,4 +1,5 @@
 import pykakasi
+from pypinyin import pinyin
 
 
 class StardewItem:
@@ -17,6 +18,13 @@ class StardewItem:
         for item in result:
             self.ja_with_hiragana += f"{item['orig']}[{item['hira'].capitalize()}] "
         self.ja_with_hiragana = self.ja_with_hiragana.strip()
+
+    def convert_pinyin(self):
+        result = pinyin(self.zh)
+        self.zh_with_pinyin = ""
+        for item in zip(self.zh, result):
+            self.zh_with_pinyin += f"{item[0]}{item[1]} "
+        self.zh_with_pinyin = self.zh_with_pinyin.strip()
 
 
 class StardewItemsProcessor:
@@ -37,3 +45,7 @@ class StardewItemsProcessor:
     def convert_hiragana(self):
         for items in self.items.values():
             items.convert_hiragana()
+
+    def convert_pinyin(self):
+        for items in self.items.values():
+            items.convert_pinyin()

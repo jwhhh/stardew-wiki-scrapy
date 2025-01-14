@@ -1,3 +1,4 @@
 scrapy
 pykakasi
 black
+pypinyin
