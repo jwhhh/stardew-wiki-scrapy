@@ -92,4 +92,4 @@ TWISTED_REACTOR = "twisted.internet.asyncioreactor.AsyncioSelectorReactor"
 FEED_EXPORT_ENCODING = "utf-8"
 
 FEED_FORMAT = "csv"
-FEED_URI = "stardew_items.csv"
+FEED_URI = "out/stardew_items.csv"
