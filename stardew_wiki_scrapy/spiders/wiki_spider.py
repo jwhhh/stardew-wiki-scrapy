@@ -4,22 +4,25 @@ import scrapy
 
 
 class StardewItem:
-    def __init__(self, english, chinese=None, japanese=None):
-        self.english = english
-        self.chinese = chinese
-        self.japanese = japanese
+    def __init__(self, en, ja=None, zh=None, zh_tw=None):
+        self.en = en
+        self.ja = ja
+        self.zh = zh
+        self.zh_tw = zh_tw
 
     def set_translation(self, translation, lang):
-        if lang == "zh":
-            self.chinese = translation
-        elif lang == "ja":
-            self.japanese = translation
+        if lang == "ja":
+            self.ja = translation
+        elif lang == "zh":
+            self.zh = translation
+        elif lang == "zh-tw":
+            self.zh_tw = translation
 
     def is_complete(self):
-        return self.chinese is not None and self.japanese is not None
+        return all([self.en, self.ja, self.zh, self.zh_tw])
 
     def __str__(self):
-        return f"{self.english}, {self.chinese} {self.japanese}"
+        return f"{self.en},{self.ja},{self.zh},{self.zh_tw}"
 
 
 class WikiSpider(scrapy.Spider):
@@ -63,10 +66,32 @@ class WikiSpider(scrapy.Spider):
         stardew_item_trans = response.css(".firstHeading::text").get()
         item = response.meta["stardew_item"]
         item.set_translation(stardew_item_trans, lang)
+        if lang == "zh":
+            yield scrapy.Request(
+                self._convert_zh_to_zh_tw(response.url),
+                self.parse_zh_tw,
+                meta={"stardew_item": item},
+            )
+        yield from self._save_if_complete(item)
+
+    def parse_zh_tw(self, response):
+        stardew_item_zh_tw = response.css(".firstHeading::text").get()
+        item = response.meta["stardew_item"]
+        item.set_translation(stardew_item_zh_tw, "zh-tw")
+        yield from self._save_if_complete(item)
+    
+    def _convert_zh_to_zh_tw(self, zh):
+        base_url = zh.split('.com')[0] + '.com'
+        title = zh.split('.com/')[1]
+        new_url = f"{base_url}/mediawiki/index.php?title={title}&variant=zh-tw"
+        return new_url
+    
+    def _save_if_complete(self, item):
         if item.is_complete():
             self.log(f"Completed item: {item}")
             yield {
-                "english": item.english,
-                "chinese": item.chinese,
-                "japanese": item.japanese,
+                "en": item.en,
+                "ja": item.ja,
+                "zh": item.zh,
+                "zh-tw": item.zh_tw,
             }
