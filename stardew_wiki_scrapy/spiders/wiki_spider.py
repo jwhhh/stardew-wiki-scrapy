@@ -4,11 +4,13 @@ import scrapy
 
 
 class StardewItem:
-    def __init__(self, en, ja=None, zh=None, zh_tw=None):
+    def __init__(self, en, url, img_url):
         self.en = en
-        self.ja = ja
-        self.zh = zh
-        self.zh_tw = zh_tw
+        self.ja = None
+        self.zh = None
+        self.zh_tw = None
+        self.url = url
+        self.img_url = img_url
 
     def set_translation(self, translation, lang):
         if lang == "ja":
@@ -29,6 +31,7 @@ class WikiSpider(scrapy.Spider):
     name = "stardew_wiki"
     base_url = "https://stardewvalleywiki.com"
     start_url = "https://stardewvalleywiki.com/Category:Content"
+    fallback_img = "https://stardewvalley.net/wp-content/uploads/2017/12/med_logo.png"
 
     def start_requests(self):
         self.stardew_items = dict()
@@ -51,7 +54,8 @@ class WikiSpider(scrapy.Spider):
     def _process_english_page(self, response):
         stardew_item_en = response.css(".firstHeading::text").get()
         if stardew_item_en not in self.stardew_items:
-            item = StardewItem(stardew_item_en)
+            img_url = self._get_img_url(response)
+            item = StardewItem(stardew_item_en, response.url, img_url)
             for lang in ["zh", "ja"]:
                 translation = response.css(
                     f".interlanguage-link.interwiki-{lang} a::attr(href)"
@@ -79,6 +83,15 @@ class WikiSpider(scrapy.Spider):
         item = response.meta["stardew_item"]
         item.set_translation(stardew_item_zh_tw, "zh-tw")
         yield from self._save_if_complete(item)
+     
+    def _get_img_url(self, response):
+        img_url = response.css("#infoboxtable img::attr(src)").get()
+        if img_url is None:
+            img_url = response.css(".thumb.tright img::attr(src)").get()
+        if img_url is None:
+            return self.fallback_img
+        else:
+            return f"{self.base_url}{img_url}"
     
     def _convert_zh_to_zh_tw(self, zh):
         base_url = zh.split('.com')[0] + '.com'
@@ -94,4 +107,6 @@ class WikiSpider(scrapy.Spider):
                 "ja": item.ja,
                 "zh": item.zh,
                 "zh-tw": item.zh_tw,
+                "url": item.url,
+                "img_url": item.img_url,
             }
